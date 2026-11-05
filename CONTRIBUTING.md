@@ -18,3 +18,5 @@ git push -u origin feat/archive-search
 3. 릴리스 커밋을 `dev`에도 반영할 필요가 있으면 같은 저장소의 `main → dev` 동기화 PR을 연다.
 
 `main`과 `dev`는 PR과 `verify` 통과, 대화 해결이 필요하다. 직접 push·강제 push·삭제를 제한한다. 1인 초기 운영을 위해 승인 인원 최소값은 0명이다. 현재 `verify`는 PR 경로, README, 변경 공백을 검사한다. 실행 코드 이전 시 BE의 API·DB, FE의 화면·상태, AI의 스키마·근거 검사를 각 저장소 CI에 연결한다.
+
+PR의 자동 검사가 시작되지 않으면 **Actions → CI → Run workflow**에서 PR의 출발 브랜치를 고르고 PR 번호를 입력한다. GitHub의 열린 PR과 실행 커밋이 일치할 때 `verify`를 실행한다. PR 번호 없이 실행한 `smoke`는 저장소 기본 검사다.

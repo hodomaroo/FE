@@ -2,6 +2,11 @@ name: CI
 
 on:
   workflow_dispatch:
+    inputs:
+      pull_request:
+        description: 'Open PR number. Select its source branch above.'
+        required: false
+        type: string
   push:
     branches: [main, dev]
   pull_request:
@@ -9,39 +14,52 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   verify:
+    name: ${{ (github.event_name == 'pull_request' || inputs.pull_request != '') && 'verify' || 'smoke' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
 
-      - name: Check pull request route
-        if: github.event_name == 'pull_request'
+      - name: Verify PR route and changed files
         env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pull_request }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
+          test -s README.md
+          if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' && -n "$PR_NUMBER" ]]; then
+            [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+            pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")
+            jq -e --arg sha "$GITHUB_SHA" --arg ref "$GITHUB_REF_NAME" \
+              --arg repo "$GITHUB_REPOSITORY" \
+              '.state == "open" and .head.sha == $sha and .head.ref == $ref and .head.repo.full_name == $repo' \
+              <<< "$pr" >/dev/null
+            GITHUB_BASE_REF=$(jq -r .base.ref <<< "$pr")
+            GITHUB_HEAD_REF=$(jq -r .head.ref <<< "$pr")
+            HEAD_REPOSITORY=$(jq -r .head.repo.full_name <<< "$pr")
+            BASE_SHA=$(jq -r .base.sha <<< "$pr")
+          fi
+
+          if [[ -z "$BASE_SHA" ]]; then
+            git show --format= --check HEAD
+            exit 0
+          fi
+
           case "$GITHUB_BASE_REF/$GITHUB_HEAD_REF" in
-            dev/feat/?*) exit 0 ;;
+            dev/feat/?*) ;;
             main/dev|dev/main)
-              if [[ "$HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]; then
-                exit 0
-              fi
+              [[ "$HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
+              ;;
+            *)
+              echo 'Open feat/* → dev, dev → main, or main → dev for synchronization.'
+              exit 1
               ;;
           esac
-          echo 'Open feat/* → dev, dev → main, or main → dev for synchronization.'
-          exit 1
-
-      - name: Verify repository files
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          test -s README.md
-          if [[ -n "$BASE_SHA" ]]; then
-            git diff --check "$BASE_SHA" HEAD
-          else
-            git show --format= --check HEAD
-          fi
+          git diff --check "$BASE_SHA" HEAD
