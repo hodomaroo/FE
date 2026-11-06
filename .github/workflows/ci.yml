@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       pull_request:
-        description: 'Open PR number. Select its source branch above.'
+        description: 'Open PR number. Select feat/verify-pr-<number> above.'
         required: false
         type: string
   push:
@@ -36,10 +36,10 @@ jobs:
           test -s README.md
           if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' && -n "$PR_NUMBER" ]]; then
             [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+            [[ "$GITHUB_REF_NAME" == "feat/verify-pr-$PR_NUMBER" ]]
             pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")
-            jq -e --arg sha "$GITHUB_SHA" --arg ref "$GITHUB_REF_NAME" \
-              --arg repo "$GITHUB_REPOSITORY" \
-              '.state == "open" and .head.sha == $sha and .head.ref == $ref and .head.repo.full_name == $repo' \
+            jq -e --arg sha "$GITHUB_SHA" \
+              '.state == "open" and .merge_commit_sha == $sha' \
               <<< "$pr" >/dev/null
             GITHUB_BASE_REF=$(jq -r .base.ref <<< "$pr")
             GITHUB_HEAD_REF=$(jq -r .head.ref <<< "$pr")
@@ -54,11 +54,11 @@ jobs:
 
           case "$GITHUB_BASE_REF/$GITHUB_HEAD_REF" in
             dev/feat/?*) ;;
-            main/dev|dev/main)
+            main/dev)
               [[ "$HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
               ;;
             *)
-              echo 'Open feat/* → dev, dev → main, or main → dev for synchronization.'
+              echo 'Open feat/* → dev or dev → main.'
               exit 1
               ;;
           esac
