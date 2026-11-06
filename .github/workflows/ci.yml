@@ -2,11 +2,6 @@ name: CI
 
 on:
   workflow_dispatch:
-    inputs:
-      pull_request:
-        description: 'Open PR number. Select feat/verify-pr-<number> above.'
-        required: false
-        type: string
   push:
     branches: [main, dev]
   pull_request:
@@ -14,43 +9,29 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   verify:
-    name: ${{ (github.event_name == 'pull_request' || inputs.pull_request != '') && 'verify' || 'smoke' }}
+    name: ${{ github.event_name == 'pull_request' && 'verify' || 'smoke' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 2
           persist-credentials: false
 
       - name: Verify PR route and changed files
         env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ inputs.pull_request }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           test -s README.md
-          if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' && -n "$PR_NUMBER" ]]; then
-            [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
-            [[ "$GITHUB_REF_NAME" == "feat/verify-pr-$PR_NUMBER" ]]
-            pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")
-            jq -e --arg sha "$GITHUB_SHA" \
-              '.state == "open" and .merge_commit_sha == $sha' \
-              <<< "$pr" >/dev/null
-            GITHUB_BASE_REF=$(jq -r .base.ref <<< "$pr")
-            GITHUB_HEAD_REF=$(jq -r .head.ref <<< "$pr")
-            HEAD_REPOSITORY=$(jq -r .head.repo.full_name <<< "$pr")
-            BASE_SHA=$(jq -r .base.sha <<< "$pr")
-          fi
-
-          if [[ -z "$BASE_SHA" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" != 'pull_request' ]]; then
             git show --format= --check HEAD
             exit 0
           fi
+
+          test -n "$BASE_SHA"
 
           case "$GITHUB_BASE_REF/$GITHUB_HEAD_REF" in
             dev/feat/?*) ;;
