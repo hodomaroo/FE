@@ -4,7 +4,7 @@
 
 Instagram에서 봇으로 공유하거나 웹에 URL을 붙여 넣습니다. MARCH는 링크부터 저장하고, 확보한 설명문이나 원문이 있으면 요약·태그·확인된 정보를 정리합니다. 나중에 키워드로 찾고, 카드에서 어떤 원문을 근거로 정리했는지 확인할 수 있습니다.
 
-[제품 기획](docs/PRD.md) · [화면과 디자인](docs/DESIGN.md) · [고민과 결정 기록](docs/DECISIONS.md) · [공유 컬렉션 구상](docs/SHARING.md) · [개발 흐름](CONTRIBUTING.md)
+[제품 기획](docs/PRD.md) · [화면과 디자인](docs/DESIGN.md) · [고민과 결정 기록](docs/DECISIONS.md) · [P2 공유 컬렉션 구상](docs/SHARING.md) · [개발 흐름](CONTRIBUTING.md)
 
 ## 사용 흐름
 
@@ -33,8 +33,8 @@ Instagram에서 봇으로 공유하거나 웹에 URL을 붙여 넣습니다. MAR
 
 | 저장소 | 책임 |
 | --- | --- |
-| [BE](https://github.com/hodomaroo/BE) | 인증, Capture API, Instagram 연동, DB·작업 큐·비용 원장 |
+| [BE](https://github.com/march-my-archive/BE) | 인증, Capture API, Instagram 연동, DB·작업 큐·비용 원장 |
 | **FE** · 이 저장소 | 저장·검색·보관함·상세·연결 관리 화면, 디자인 토큰 |
-| [AI](https://github.com/hodomaroo/AI) | 원문 구조화·근거 검증, 모델 어댑터, 품질·비용 비교 |
+| [AI](https://github.com/march-my-archive/AI) | 원문 구조화·근거 검증, 모델 어댑터, 품질·비용 비교 |
 
 이 저장소들은 기획·디자인과 개발 흐름을 담은 초기 상태입니다. 위 기능을 구현한 파일럿 코드는 단일 로컬 프로젝트에서 실행됩니다.

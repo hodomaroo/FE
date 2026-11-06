@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   verify:
+    name: ${{ github.event_name == 'pull_request' && 'verify' || 'smoke' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -19,29 +20,27 @@ jobs:
           fetch-depth: 2
           persist-credentials: false
 
-      - name: Check pull request route
-        if: github.event_name == 'pull_request'
-        env:
-          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-        run: |
-          case "$GITHUB_BASE_REF/$GITHUB_HEAD_REF" in
-            dev/feat/?*) exit 0 ;;
-            main/dev|dev/main)
-              if [[ "$HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]; then
-                exit 0
-              fi
-              ;;
-          esac
-          echo 'Open feat/* → dev, dev → main, or main → dev for synchronization.'
-          exit 1
-
-      - name: Verify repository files
+      - name: Verify PR route and changed files
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           test -s README.md
-          if [[ -n "$BASE_SHA" ]]; then
-            git diff --check "$BASE_SHA" HEAD
-          else
+          if [[ "$GITHUB_EVENT_NAME" != 'pull_request' ]]; then
             git show --format= --check HEAD
+            exit 0
           fi
+
+          test -n "$BASE_SHA"
+
+          case "$GITHUB_BASE_REF/$GITHUB_HEAD_REF" in
+            dev/feat/?*) ;;
+            main/dev)
+              [[ "$HEAD_REPOSITORY" == "$GITHUB_REPOSITORY" ]]
+              ;;
+            *)
+              echo 'Open feat/* → dev or dev → main.'
+              exit 1
+              ;;
+          esac
+          git diff --check "$BASE_SHA" HEAD
